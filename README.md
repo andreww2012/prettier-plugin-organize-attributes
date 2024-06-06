@@ -124,6 +124,36 @@ Read below for writing custom attribute orders and configurations ⤵️
 <div group-a group-b group-A group-B></div>
 ```
 
+---
+
+### Keep certain attributes in place
+
+You can prevent certain attributes from being moved altogether with `prettier-ignore-organize-attributes` comment:
+
+```json5
+// .prettierrc
+{
+  "plugins": ["prettier-plugin-organize-attributes"],
+  "attributeGroups": ["^a$", "^b$", "^c$", "^d$"]
+}
+```
+
+Input:
+
+```html
+<!-- prettier-ignore-organize-attributes a1 a2 a3 -->
+<div c="c" a1="1" d="d" a2="2" a="a" a3="3" b="b"></div>
+```
+
+*(Note that attributes should be space separated)*
+
+Output:
+
+```html
+<!-- prettier-ignore-organize-attributes a1 a2 a3 -->
+<div a="a" a1="1" b="b" a2="2" c="c" a3="3" d="d"></div>
+```
+
 ## Presets
 
 ### HTML

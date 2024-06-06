@@ -19,6 +19,7 @@ export interface BaseOrganizeOptions<TPresets extends Presets> {
   groups: GroupKey<TPresets>[];
   sort?: OrganizeOptionsSort;
   ignoreCase?: boolean;
+  ignoredAttributes?: string[];
 }
 
 export type OrganizeOptionsSort = "ASC" | "DESC" | boolean;
@@ -90,8 +91,15 @@ export function miniorganize<TValue>(
     }
   };
 
-  values.forEach((value) => {
+  const ignoredValuesInfo: { value: TValue; position: number }[] = [];
+
+  values.forEach((value, position) => {
     const mapped = getString(value);
+
+    if (options.ignoredAttributes?.includes(mapped)) {
+      ignoredValuesInfo.push({ value, position });
+      return;
+    }
 
     for (let group of groups) {
       if (group.regexp && mapped.match(group.regexp)) {
@@ -113,8 +121,26 @@ export function miniorganize<TValue>(
     });
   }
 
+  const nonIgnoredValues = groups.flatMap((group) => group.values);
+  const allValues: TValue[] = [];
+  for (
+    let i = 0, nonIgnoredValuesChecked = 0;
+    i < ignoredValuesInfo.length;
+    i++
+  ) {
+    const { value, position } = ignoredValuesInfo[i];
+    const nonIgnoredValuesToRemoveCount =
+      position - nonIgnoredValuesChecked - i;
+    allValues.push(
+      ...nonIgnoredValues.splice(0, nonIgnoredValuesToRemoveCount),
+      value,
+    );
+    nonIgnoredValuesChecked += nonIgnoredValuesToRemoveCount;
+  }
+  allValues.push(...nonIgnoredValues);
+
   return {
-    flat: groups.flatMap((group) => group.values),
+    flat: allValues,
     groups: groups.map(({ query, values }) => ({ query, values })),
   };
 }

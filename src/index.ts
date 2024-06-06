@@ -50,6 +50,14 @@ function wrapParser(parser: Parser<any>): Parser<any> {
   };
 }
 
+function getPrettierIgnoreAttributeCommentData(value?: string) {
+  const match = value
+    ?.trim()
+    .match(/^prettier-ignore-organize-attributes\s+(.+)$/s);
+
+  return match?.[1].split(/\s+/) || [];
+}
+
 function transformPostParse(parse: Parser<any>["parse"]): Parser<any>["parse"] {
   return (text, options) =>
     transformRootNode(
@@ -89,7 +97,8 @@ function transformNode(
   node: HTMLNode,
   groups: string[],
   sort: OrganizeOptionsSort,
-  ignoreCase = true
+  ignoreCase = true,
+  ignoredAttributes?: string[],
 ): void {
   if (node.attrs) {
     node.attrs = miniorganize(node.attrs, {
@@ -98,12 +107,25 @@ function transformNode(
       groups,
       sort,
       map: ({ name }) => name,
+      ignoredAttributes,
     }).flat;
   }
 
-  node.children?.forEach((child) =>
-    transformNode(child, groups, sort, ignoreCase)
-  );
+  let foundIgnoredAttributes: string[] | undefined;
+  node.children?.forEach((child) => {
+    transformNode(child, groups, sort, ignoreCase, foundIgnoredAttributes);
+
+    if (child.type === "comment") {
+      const currentIgnoredAttributes = getPrettierIgnoreAttributeCommentData(
+        child.value,
+      );
+      if (currentIgnoredAttributes.length > 0) {
+        foundIgnoredAttributes = currentIgnoredAttributes;
+      }
+    } else if (!(child.type === "text" && (child.value || "").trim() === "")) {
+      foundIgnoredAttributes = undefined;
+    }
+  });
 }
 
 export type PrettierPluginOrganizeAttributesParserOptions = {
